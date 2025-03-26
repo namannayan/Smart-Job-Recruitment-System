@@ -1,53 +1,84 @@
-# Smart-Job-Recruitment-System
-A C++ based Job Recruitment System that connects job seekers with recruiters through an efficient database-driven platform. The system features:
+Smart Job Recruitment System
 
-User registration and authentication (Job Seekers & Recruiters)
+Overview
 
-Job posting and management
+The Smart Job Recruitment System is a C++ application that facilitates job seekers and recruiters in managing job postings and applications. It utilizes MySQL for database management and provides functionalities such as user registration, job posting, resume updates, job search, and candidate ranking.
 
-Advanced job search using Trie data structure
+Features:
 
-Resume matching algorithm using TF-IDF
+(i) User Authentication: Register and log in as a job seeker or recruiter.
 
-MySQL database integration
+(ii) Database Management: Secure connection to MySQL with automatic table creation.
 
-✨ Features
-For Job Seekers
-Create profile and upload resume
+(iii) Job Posting: Recruiters can post job opportunities with relevant details.
 
-Search for jobs using keywords
+(iv) Resume Upload: Job seekers can update their resumes.
 
-View all available job listings
+(v) Job Search: Users can search for jobs based on keywords.
 
-Update resume information
+(vi)Candidate Ranking: Recruiters can match candidates to job descriptions using TF-IDF scoring.
 
-For Recruiters
-Post new job opportunities
+(vii)Optimized Search: Trie-based search for efficient job searching.
 
-View all posted jobs
 
-Search for qualified candidates using resume matching
 
-Manage job listings
 
-Technical Features
-MySQL database integration
+Technologies Used:
 
-Trie-based job search for fast prefix matching
+(i)Programming Language: C++
 
-TF-IDF algorithm for resume-job matching
+(ii)Database: MySQL
 
-Object-oriented design
+(iii)Libraries:
 
-Secure password handling
+(iv)MySQL Connector/C++
 
-🛠️ Technologies Used
-Programming Language: C++
+(v)Standard Template Library (STL)
 
-Database: MySQL
 
-Data Structures: Trie, Vectors, Maps
+Setup Instructions:
 
-Algorithms: TF-IDF, String Processing
+Prerequisites
 
-Libraries: MySQL Connector/C++
+Install MySQL Server
+
+Install MySQL Connector/C++
+
+Ensure g++ is installed for compilation
+
+Steps to Run
+
+Clone the repository:
+
+git clone https://github.com/yourusername/job-recruitment-system.git
+cd job-recruitment-system
+
+Compile the project:
+
+g++ main.cpp -o job_recruitment -lmysqlclient
+
+Run the application:
+
+./job_recruitment
+
+Database Configuration
+
+Modify the database connection credentials in main.cpp if needed:
+
+const char DB_HOST[] = "localhost";
+
+const char DB_USER[] = "root";
+
+const char DB_PASS[] = "yourpassword";
+
+const char DB_NAME[] = "JobRecruitment";
+
+
+Contributing
+
+Feel free to fork this repository and contribute by creating pull requests.
+
+License
+
+This project is licensed under the MIT License.
+
