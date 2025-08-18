@@ -272,125 +272,91 @@ public:
     }
 };
 
-// Job Search using Trie
+// Job Search using Linked List
 class JobSearchEngine {
 private:
-    struct TrieNode {
-        TrieNode* children[26] = {nullptr};
-        vector<int> jobIds;
+    struct JobNode {
+        int jobId;
+        string title;
+        JobNode* next;
         
-        ~TrieNode() {
-            for (int i = 0; i < 26; i++) {
-                delete children[i];
-            }
-        }
+        JobNode(int id, const string& t) : jobId(id), title(t), next(nullptr) {}
     };
 
-    TrieNode* root;
+    JobNode* head;
     Database& db;
 
-    // Private methods
-    void clearTrie(TrieNode* node) {
-        if (!node) return;
-        for (int i = 0; i < 26; i++) {
-            clearTrie(node->children[i]);
+    void clearList() {
+        JobNode* current = head;
+        while (current) {
+            JobNode* next = current->next;
+            delete current;
+            current = next;
         }
-        delete node;
-    }
-
-    void insertJob(const string& title, int jobId) {
-        TrieNode* node = root;
-        for (char ch : title) {
-            ch = tolower(ch);
-            if (ch < 'a' || ch > 'z') continue;
-            
-            if (!node->children[ch - 'a']) {
-                node->children[ch - 'a'] = new TrieNode();
-            }
-            node = node->children[ch - 'a'];
-        }
-        node->jobIds.push_back(jobId);
+        head = nullptr;
     }
 
 public:
-    // Constructor
-    explicit JobSearchEngine(Database& database) : db(database), root(new TrieNode()) {
+    explicit JobSearchEngine(Database& database) : db(database), head(nullptr) {
         loadJobsFromDatabase();
     }
 
-    // Delete copy constructor and assignment operator
     JobSearchEngine(const JobSearchEngine&) = delete;
     JobSearchEngine& operator=(const JobSearchEngine&) = delete;
 
-    // Move constructor
-    JobSearchEngine(JobSearchEngine&& other) noexcept 
-        : db(other.db), root(other.root) {
-        other.root = nullptr;
-    }
-
-    // Move assignment operator
-    JobSearchEngine& operator=(JobSearchEngine&& other) noexcept {
-        if (this != &other) {
-            clearTrie(root);
-            root = other.root;
-            other.root = nullptr;
-        }
-        return *this;
-    }
-
-    // Destructor
     ~JobSearchEngine() {
-        clearTrie(root);
+        clearList();
     }
 
-    // Public interface
     void loadJobsFromDatabase() {
-        clearTrie(root);
-        root = new TrieNode();
+        clearList();
         
         string query = "SELECT job_id, title FROM Jobs";
         MYSQL_RES* res = db.executeQueryWithResult(query);
         if (!res) return;
 
         MYSQL_ROW row;
+        JobNode** current = &head; // Pointer to the current end pointer
+        
         while ((row = mysql_fetch_row(res))) {
             int jobId = atoi(row[0]);
             string title = row[1];
-            insertJob(title, jobId);
+            
+            *current = new JobNode(jobId, title);
+            current = &((*current)->next);
         }
         mysql_free_result(res);
     }
 
-    void searchJobs(const string& prefix) {
-        TrieNode* node = root;
-        for (char ch : prefix) {
-            ch = tolower(ch);
-            if (ch < 'a' || ch > 'z') continue;
-            
-            if (!node->children[ch - 'a']) {
-                cout << "No jobs found with this prefix\n";
-                return;
+    void searchJobs(const string& keyword) {
+        string lowerKeyword = Utils::toLower(Utils::trim(keyword));
+        vector<JobNode*> matches;
+        
+        // Search through the linked list
+        for (JobNode* current = head; current != nullptr; current = current->next) {
+            string lowerTitle = Utils::toLower(current->title);
+            if (lowerTitle.find(lowerKeyword) != string::npos) {
+                matches.push_back(current);
             }
-            node = node->children[ch - 'a'];
         }
 
-        if (node->jobIds.empty()) {
-            cout << "No jobs found with this prefix\n";
+        if (matches.empty()) {
+            cout << "No jobs found matching your search\n";
             return;
         }
 
         cout << "\nMatching Jobs:\n";
         cout << "----------------------------------------\n";
-        for (int jobId : node->jobIds) {
+        for (JobNode* node : matches) {
             string query = "SELECT j.title, j.location, j.salary, u.name FROM Jobs j "
                           "JOIN Users u ON j.recruiter_id = u.user_id "
-                          "WHERE j.job_id = " + to_string(jobId);
+                          "WHERE j.job_id = " + to_string(node->jobId);
             
             MYSQL_RES* res = db.executeQueryWithResult(query);
             if (res) {
                 MYSQL_ROW row = mysql_fetch_row(res);
                 if (row) {
-                    cout << "ID: " << jobId << " | Title: " << row[0] 
+                    cout << "ID: " << node->jobId << " | Title: " << row[0] 
                          << " | Location: " << row[1] 
                          << " | Salary: " << row[2] 
                          << " | Recruiter: " << row[3] << "\n";
@@ -630,40 +596,40 @@ private:
         Utils::pause();
     }
 
-    void handleJobPosting() {
-        if (!userManager.isLoggedIn() || userManager.getRole() != "Recruiter") {
-            cout << "Unauthorized action\n";
-            Utils::pause();
-            return;
-        }
-
-        Utils::clearScreen();
-        cout << "POST A JOB\n";
-        cout << "----------------------------------------\n";
-        
-        string title, description, location, skills;
-        int salary;
-        
-        cout << "Job Title: ";
-        getline(cin, title);
-        cout << "Description: ";
-        getline(cin, description);
-        cout << "Location: ";
-        getline(cin, location);
-        cout << "Required Skills: ";
-        getline(cin, skills);
-        cout << "Salary: ";
-        cin >> salary;
-        cin.ignore();
-        
-        if (jobManager.postJob(userManager.getUserId(), title, description, location, skills, salary)) {
-            cout << "\nJob posted successfully!\n";
-            jobSearch = JobSearchEngine(db); // Refresh search index
-        } else {
-            cout << "\nFailed to post job. Please try again.\n";
-        }
+  void handleJobPosting() {
+    if (!userManager.isLoggedIn() || userManager.getRole() != "Recruiter") {
+        cout << "Unauthorized action\n";
         Utils::pause();
+        return;
     }
+
+    Utils::clearScreen();
+    cout << "POST A JOB\n";
+    cout << "----------------------------------------\n";
+    
+    string title, description, location, skills;
+    int salary;
+    
+    cout << "Job Title: ";
+    getline(cin, title);
+    cout << "Description: ";
+    getline(cin, description);
+    cout << "Location: ";
+    getline(cin, location);
+    cout << "Required Skills: ";
+    getline(cin, skills);
+    cout << "Salary: ";
+    cin >> salary;
+    cin.ignore();
+    
+    if (jobManager.postJob(userManager.getUserId(), title, description, location, skills, salary)) {
+        cout << "\nJob posted successfully!\n";
+        jobSearch.loadJobsFromDatabase(); // Changed from assignment to reload
+    } else {
+        cout << "\nFailed to post job. Please try again.\n";
+    }
+    Utils::pause();
+}
 
     void handleResumeUpdate() {
         if (!userManager.isLoggedIn() || userManager.getRole() != "JobSeeker") {
